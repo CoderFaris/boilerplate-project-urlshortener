@@ -27,55 +27,43 @@ let urlDatabase = {};  // short_url -> original_url
 let reverseDatabase = {};  // original_url -> short_url
 let idCounter = 1;
 
-
-const isValidUrl = (s) => {
-
-  try {
-
-    new URL(s);
-    return true;
-  } catch (err) {
-
-    return false
-
-  }
-
-}
-
 app.post('/api/shorturl', function(req, res) {
   const originalUrl = req.body.url;
 
-  
-  if (!isValidUrl(originalUrl)) {
-
-    res.json({"error" : "invalid url"})
-
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(originalUrl);
+  } catch (err) {
+    return res.json({ error: 'invalid url' });
   }
 
+  dns.lookup(parsedUrl.hostname, (err) => {
+    if (err) {
+      return res.json({ error: 'invalid url' });
+    }
 
-  
-  if (reverseDatabase[originalUrl]) {
-    const shortUrl = reverseDatabase[originalUrl];
-    res.json({ original_url: originalUrl, short_url: shortUrl });
-  } else {
-    const shortUrl = idCounter++;
-    
-    
-    urlDatabase[shortUrl] = originalUrl;
-    reverseDatabase[originalUrl] = shortUrl;
-    
-    res.json({ original_url: originalUrl, short_url: shortUrl });
-  }
+    if (reverseDatabase[originalUrl]) {
+      const shortUrl = reverseDatabase[originalUrl];
+      res.json({ original_url: originalUrl, short_url: shortUrl });
+    } else {
+      const shortUrl = idCounter++;
+
+      urlDatabase[shortUrl] = originalUrl;
+      reverseDatabase[originalUrl] = shortUrl;
+
+      res.json({ original_url: originalUrl, short_url: shortUrl });
+    }
+  });
 });
 
 app.get('/api/shorturl/:short_url', function(req, res) {
   const shortUrl = req.params.short_url;
   const originalUrl = urlDatabase[shortUrl];
-  
+
   if (originalUrl) {
     res.redirect(originalUrl);
   } else {
-    res.json({"error" : "no short url found"})
+    res.json({ error: 'no short url found' });
   }
 });
 
